@@ -29,7 +29,6 @@ TILE_COLORS = {
     2048: "#c80048",
 }
 
-
 class ScoreStorage(ABC):
     @abstractmethod
     def load_highscore(self) -> int: ...
@@ -40,8 +39,6 @@ class ScoreStorage(ABC):
     @abstractmethod
     def describe(self) -> str: ...
     def close(self) -> None: pass
-
-
 class JsonScoreStorage(ScoreStorage):
     def __init__(self, path: str):
         self.__path = path
@@ -97,8 +94,6 @@ class SqliteScoreStorage(ScoreStorage):
         return f"Storage: database (player: {self.__player})"
     def close(self) -> None:
         self.__conn.close()
-
-
 class Tile:
     fg = "white"
     font_size = 36
@@ -116,11 +111,9 @@ class Tile:
                 (x1+x2)/2, (y1+y2)/2,
                 font=("Arial", self.font_size), fill=self.fg, text=self.label()
             )
-
 class EmptyTile(Tile):
     def draw(self, canvas, x1, y1, x2, y2) -> None:
         canvas.create_rectangle(x1, y1, x2, y2, fill=self.bg, outline="")
-
 class LightTile(Tile): fg = "#494949"
 class DarkTile(Tile): fg = "white"
 class BigTile(DarkTile): font_size = 30
@@ -132,8 +125,6 @@ def tile_for(value: int) -> Tile:
     if value <= 64: return DarkTile(value)
     if value <= 512: return BigTile(value)
     return HugeTile(value)
-
-
 class Board:
     NEW_TILES = (2, 2, 2, 2, 2, 2, 4)
     WIN_VALUE = 2048
@@ -211,8 +202,6 @@ class Board:
                 merged.append(tiles[i]); i += 1
         merged += [0]*(len(vals)-len(merged))
         return merged, gained
-
-
 class BoardView:
     def __init__(self, canvas: tk.Canvas):
         self.__canvas = canvas
@@ -235,16 +224,12 @@ class BoardView:
                 if c < len(word) and word[c] != " ":
                     self.__canvas.create_text((x+x+CELL-GAP)/2, (y+y+CELL-GAP)/2,
                         font=("Arial",36), fill="#494949", text=word[c])
-
-
 class Game(tk.Tk):
     PLAYING, WON, OVER = "playing", "won", "over"
     def __init__(self):
         super().__init__()
         
-        # ==============================================
-        # ✅ BAGONG BACKGROUND NA KULAY — PALITAN MO ITO
-        # ==============================================
+       
         self.configure(bg="#50157a")  # Kulay ng buong bintana
 
         self.board = Board()
@@ -266,7 +251,6 @@ class Game(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
         self._refresh()
-
     def _build_menu(self):
         mb = tk.Menu(self)
         fm = tk.Menu(mb, tearoff=0)
@@ -284,7 +268,6 @@ class Game(tk.Tk):
         mb.add_cascade(label="Connect", menu=self.conn_menu)
         
         self.config(menu=mb)
-
     def _build_widgets(self):
         bar = tk.Frame(self, bg="#0808ec")
         tk.Button(bar, text="New Game", command=self.new_game, bg="#b62de3", fg="white").grid(row=0,column=0, padx=3)
@@ -296,23 +279,19 @@ class Game(tk.Tk):
         
         tk.Label(self, textvariable=self.modestring, fg="#a0a0a0", bg="#50ea6b").pack(side="top")
         
-        # ✅ Kulay ng laro board
         self.canvas = tk.Canvas(self, width=420, height=420, 
                                 bg="#50157a", borderwidth=6, highlightthickness=0)
         self.canvas.pack(side="top", expand=True)
-
     def _refresh(self):
         msg = ("YOU","WON!") if self.status==self.WON else ("GAME","OVER") if self.status==self.OVER else None
         self.view.render(self.board, msg)
         self.scorestring.set(str(self.board.score))
         self.highscorestring.set(str(self.highscore))
         self.modestring.set(self.storage.describe())
-
     def _sync_status(self):
         if self.board.has_won(): self.status = self.WON
         elif self.board.is_over(): self.status = self.OVER
         else: self.status = self.PLAYING
-
     def _update_highscore(self):
         if self.board.score > self.highscore:
             self.highscore = self.board.score
@@ -320,22 +299,18 @@ class Game(tk.Tk):
             except sqlite3.Error:
                 messagebox.showwarning("DB Error", "Falling back to local file")
                 self._disconnect()
-
     def _on_key(self, e):
         if self.grab_current(): return
         if e.keysym not in ("Up","Down","Left","Right"): return
         if self.status != self.PLAYING: return
         if self.board.move(e.keysym):
             self._update_highscore(); self._sync_status(); self._refresh()
-
     def new_game(self):
         self.board.reset(); self.status=self.PLAYING; self._refresh()
-
     def _save(self):
         path = filedialog.asksaveasfilename(defaultextension=".json")
         if not path: return
         with open(path,"w") as f: json.dump(self.board.to_dict(), f)
-
     def _load(self):
         path = filedialog.askopenfilename(filetypes=[("JSON","*.json")])
         if not path: return
@@ -344,7 +319,6 @@ class Game(tk.Tk):
             self._sync_status(); self._update_highscore(); self._refresh()
         except Exception as e:
             messagebox.showerror("Load failed", str(e))
-
     def _connect_db(self):
         player = simpledialog.askstring("Player", "Your name:")
         if not player: return
@@ -358,7 +332,6 @@ class Game(tk.Tk):
             self._refresh()
         except Exception as e:
             messagebox.showerror("Connection failed", str(e))
-
     def _disconnect(self):
         self.storage.close()
         self.storage = JsonScoreStorage(HIGHSCORE_FILE)
@@ -366,20 +339,16 @@ class Game(tk.Tk):
         self.conn_menu.entryconfig("Connect to Database...", state="normal")
         self.conn_menu.entryconfig("Disconnect", state="disabled")
         self._refresh()
-
     def _leaderboard(self):
         scores = self.storage.top_scores(5)
         body = "\n".join(f"{i+1}. {n} - {s}" for i,(n,s) in enumerate(scores)) or "No scores yet."
         messagebox.showinfo("Leaderboard", f"{self.storage.describe()}\n\n{body}")
-
     def _on_close(self):
         if self.highscore > 0:
             try: self.storage.save_highscore(self.highscore)
             except Exception: pass
         self.storage.close()
         self.destroy()
-
-
 if __name__ == "__main__":
     app = Game()
     app.title("Fusion Number")
